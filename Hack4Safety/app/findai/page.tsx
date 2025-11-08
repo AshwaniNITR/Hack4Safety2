@@ -1,10 +1,8 @@
-
-// app/page.tsx
-"use client";
-
+"use client"
 import { useState } from "react";
 import { Upload, User, MapPin, Camera, FileText, Send } from "lucide-react";
 import Navbar from "@/components/Navbar";
+
 
 export default function MissingPersonForm() {
   const [formData, setFormData] = useState({
@@ -14,32 +12,13 @@ export default function MissingPersonForm() {
     physicalFeatures: "",
     reportedByName: "",
   });
+  const [addressCoordinates, setAddressCoordinates] = useState<{lat: number, lon: number} | null>(null);
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
   const [activeSection, setActiveSection] = useState(0);
-interface MissingPerson {
-  _id: string;
-  name: string;
-  age?: number;
-  gender?: string;
-  address?: string;
-  contactNumber?: string;
-  dateMissing: string;
-  placeLastSeen?: string;
-  clothingDescription?: string;
-  physicalFeatures?: string;
-  imageUrl: string;
-  embedding: number[];
-  status: string;
-  reportFiledBy?: {
-    name?: string;
-    designation?: string;
-    policeStation?: string;
-  };
-  createdAt: string;
-}
+
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
@@ -63,9 +42,7 @@ interface MissingPerson {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const handleSubmit = async () => {
     // Validate that an image has been uploaded
     if (!image) {
       setMessage({
@@ -82,9 +59,35 @@ interface MissingPerson {
     try {
       const formDataToSend = new FormData();
 
+      // Get coordinates from address if address is provided
+      let coordinates = addressCoordinates;
+      if (formData.address && !coordinates) {
+        try {
+          const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(formData.address)}`;
+          const res = await fetch(url, { headers: { "User-Agent": "Hack4Safety-App" } });
+          const data = await res.json();
+          
+          if (data.length > 0) {
+            coordinates = {
+              lat: parseFloat(data[0].lat),
+              lon: parseFloat(data[0].lon),
+            };
+          }
+        } catch (error) {
+          console.error("Failed to geocode address:", error);
+        }
+      }
+
       // Append all form fields
       Object.entries(formData).forEach(([key, value]) => {
-        if (value) formDataToSend.append(key, value);
+        if (key === "address" && coordinates) {
+          // Send coordinates instead of plain text address
+          formDataToSend.append("addressLat", coordinates.lat.toString());
+          formDataToSend.append("addressLon", coordinates.lon.toString());
+          formDataToSend.append("addressText", value); // Keep original text for reference
+        } else if (value) {
+          formDataToSend.append(key, value);
+        }
       });
 
       // Append image
@@ -93,7 +96,7 @@ interface MissingPerson {
       }
 
       const [response1] = await Promise.all([
-        fetch("/api/missingPerson", {
+        fetch("/api/reverselookup", {
           method: "POST",
           body: formDataToSend,
         }),
@@ -117,6 +120,7 @@ interface MissingPerson {
         });
         setImage(null);
         setImagePreview("");
+        setAddressCoordinates(null);
         setActiveSection(0);
       } else {
         setMessage({
@@ -154,13 +158,13 @@ interface MissingPerson {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 py-12 px-4 sm:px-6 lg:px-8 font-[Orbitron]">
-      <Navbar />
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 py-12 px-4 sm:px-6 lg:px-8">
+      <Navbar/>
       {/* Animated Background Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-cyan-400/60 rounded-full animate-pulse" />
-        <div className="absolute top-3/4 right-1/3 w-1.5 h-1.5 bg-blue-400/60 rounded-full animate-pulse delay-100" />
-        <div className="absolute bottom-1/4 left-1/3 w-1.5 h-1.5 bg-cyan-300/60 rounded-full animate-pulse delay-200" />
+        <div className="absolute top-3/4 right-1/3 w-1.5 h-1.5 bg-blue-400/60 rounded-full animate-pulse" />
+        <div className="absolute bottom-1/4 left-1/3 w-1.5 h-1.5 bg-cyan-300/60 rounded-full animate-pulse" />
       </div>
 
       <div className="max-w-4xl mx-auto relative z-10">
@@ -229,7 +233,7 @@ interface MissingPerson {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="p-8">
+          <div className="p-8">
             {/* Personal Information */}
             <div
               className={`space-y-6 transition-all duration-500 ${
@@ -303,10 +307,6 @@ interface MissingPerson {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-               
-
-             
-
                 <div className="md:col-span-2 space-y-2">
                   <label className="block text-sm font-medium text-slate-300">
                     Clothing Description
@@ -426,9 +426,7 @@ interface MissingPerson {
             <div className="flex justify-between items-center mt-12 pt-6 border-t border-slate-700/50">
               <button
                 type="button"
-                onClick={() =>
-                  setActiveSection((prev) => Math.max(0, prev - 1))
-                }
+                onClick={() => setActiveSection((prev) => Math.max(0, prev - 1))}
                 disabled={activeSection === 0}
                 className="px-6 py-3 bg-slate-700/50 text-slate-300 font-medium rounded-xl hover:bg-slate-600/50 focus:outline-none focus:ring-2 focus:ring-slate-500 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-300"
               >
@@ -438,18 +436,15 @@ interface MissingPerson {
               {activeSection < sections.length - 1 ? (
                 <button
                   type="button"
-                  onClick={() =>
-                    setActiveSection((prev) =>
-                      Math.min(sections.length - 1, prev + 1)
-                    )
-                  }
+                  onClick={() => setActiveSection((prev) => Math.min(sections.length - 1, prev + 1))}
                   className="px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-medium rounded-xl hover:from-blue-600 hover:to-cyan-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300"
                 >
                   Next
                 </button>
               ) : (
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={handleSubmit}
                   disabled={loading}
                   className="px-8 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-medium rounded-xl hover:from-green-600 hover:to-emerald-600 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 flex items-center space-x-2"
                 >
@@ -458,7 +453,7 @@ interface MissingPerson {
                 </button>
               )}
             </div>
-          </form>
+          </div>
         </div>
 
         {/* AI Features Info */}

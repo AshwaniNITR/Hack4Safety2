@@ -4,7 +4,7 @@ const missingPersonSchema = new mongoose.Schema({
   name: { type: String, required: true },
   age: { type: Number },
   gender: { type: String, enum: ["Male", "Female", "Other"] },
-  address: { type: String },
+  address: { type: String || Float64Array },
   contactNumber: { type: String },
   dateMissing: { type: Date, required: true },
   placeLastSeen: { type: String },
