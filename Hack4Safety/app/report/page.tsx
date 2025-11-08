@@ -3,7 +3,8 @@
 
 // import { useState } from 'react';
 // import { Upload, User, MapPin, Camera, FileText, Send } from 'lucide-react';
-// import Navbar from '../components/Navbar';
+// import Navbar from '@/components/Navbar';
+
 // export default function MissingPersonForm() {
 //   const [formData, setFormData] = useState({
 //     name: '',
@@ -15,6 +16,7 @@
 //     placeLastSeen: '',
 //     clothingDescription: '',
 //     physicalFeatures: '',
+//     physicalFeaturesData:{},
 //     reportedByName: '',
 //     reportedByDesignation: '',
 //     policeStation: '',
@@ -46,6 +48,15 @@
 
 //   const handleSubmit = async (e: React.FormEvent) => {
 //     e.preventDefault();
+    
+//     // Validate that an image has been uploaded
+//     if (!image) {
+//       setMessage({ type: 'error', text: 'Please upload a photo before submitting.' });
+//       setActiveSection(2); // Navigate to photo upload section
+//       return;
+      
+//     }
+    
 //     setLoading(true);
 //     setMessage({ type: '', text: '' });
 
@@ -53,8 +64,16 @@
 //       const formDataToSend = new FormData();
       
 //       // Append all form fields
-//       Object.entries(formData).forEach(([key, value]) => {
-//         if (value) formDataToSend.append(key, value);
+//       // Object.entries(formData).forEach(([key, value]) => {
+//       //   if (value) formDataToSend.append(key, value);
+//       // });
+//        Object.entries(formData).forEach(([key, value]) => {
+//         // Skip physicalFeaturesData as it's an object (we use physicalFeatures string instead)
+//         if (key === 'physicalFeaturesData') return;
+        
+//         if (value && typeof value === 'string') {
+//           formDataToSend.append(key, value);
+//         }
 //       });
       
 //       // Append image
@@ -62,14 +81,15 @@
 //         formDataToSend.append('image', image);
 //       }
 
-//       const response = await fetch('/api/missingPerson', {
+//        const [response1] = await Promise.all([
+//       fetch('/api/missingPerson', {
 //         method: 'POST',
 //         body: formDataToSend,
-//       });
+//       }),
+//     ]);
 
-//       const result = await response.json();
-
-//       if (response.ok) {
+//     const result1 = await response1.json();
+//       if (response1.ok ) {
 //         setMessage({ type: 'success', text: 'Missing person report filed successfully! Our AI system is now processing the data.' });
 //         // Reset form
 //         setFormData({
@@ -82,6 +102,7 @@
 //           placeLastSeen: '',
 //           clothingDescription: '',
 //           physicalFeatures: '',
+//           physicalFeaturesData:{},
 //           reportedByName: '',
 //           reportedByDesignation: '',
 //           policeStation: '',
@@ -90,7 +111,7 @@
 //         setImagePreview('');
 //         setActiveSection(0);
 //       } else {
-//         setMessage({ type: 'error', text: result.error || 'Failed to file report' });
+//         setMessage({ type: 'error', text: result1.error || 'Failed to file report' });
 //       }
 //     } catch (error) {
 //       setMessage({ type: 'error', text: 'An error occurred. Please try again.' });
@@ -296,17 +317,45 @@
 //                   />
 //                 </div>
 
-//                 <div className="md:col-span-2 space-y-2">
-//                   <label className="block text-sm font-medium text-slate-300">Physical Features</label>
-//                   <textarea
-//                     name="physicalFeatures"
-//                     value={formData.physicalFeatures}
-//                     onChange={handleChange}
-//                     rows={3}
-//                     className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-200 placeholder-slate-400 transition-all duration-300 resize-none"
-//                     placeholder="Height, weight, scars, tattoos, distinctive features..."
-//                   />
-//                 </div>
+//                <div className="md:col-span-2 space-y-2">
+//   <label className="block text-sm font-medium text-slate-300">
+//     Physical Features
+//   </label>
+
+//   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+//     {["Hair", "Eye Color", "Height", "Weight", "Birthmark", "Other"].map(
+//       (field) => (
+//         <input
+//           key={field}
+//           type="text"
+//           placeholder={`${field}...`}
+//           onChange={(e) => {
+//             // Update local features
+//             const updated = {
+//               ...formData.physicalFeaturesData,
+//               [field.toLowerCase()]: e.target.value,
+//             };
+
+//             // Join all filled fields into one string
+//             const combined = Object.entries(updated)
+//               .filter(([_, v]) => (v as string).trim() !== "")
+//               .map(([k, v]) => `${k}: ${v}`)
+//               .join(", ");
+
+//             // Update formData
+//             setFormData({
+//               ...formData,
+//               physicalFeaturesData: updated,
+//               physicalFeatures: combined,
+//             });
+//           }}
+//           className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-xl text-slate-200 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+//         />
+//       )
+//     )}
+//   </div>
+// </div>
+
 //               </div>
 //             </div>
 
@@ -328,7 +377,6 @@
 //                     type="file"
 //                     accept="image/*"
 //                     onChange={handleImageChange}
-//                     required
 //                     className="hidden"
 //                     id="image-upload"
 //                   />
@@ -462,6 +510,7 @@ export default function MissingPersonForm() {
     placeLastSeen: '',
     clothingDescription: '',
     physicalFeatures: '',
+    physicalFeaturesData:{} as Record<string,string>,
     reportedByName: '',
     reportedByDesignation: '',
     policeStation: '',
@@ -510,7 +559,12 @@ export default function MissingPersonForm() {
       
       // Append all form fields
       Object.entries(formData).forEach(([key, value]) => {
-        if (value) formDataToSend.append(key, value);
+        // Skip physicalFeaturesData as it's an object (we use physicalFeatures string instead)
+        if (key === 'physicalFeaturesData') return;
+        
+        if (value && typeof value === 'string') {
+          formDataToSend.append(key, value);
+        }
       });
       
       // Append image
@@ -539,6 +593,7 @@ export default function MissingPersonForm() {
           placeLastSeen: '',
           clothingDescription: '',
           physicalFeatures: '',
+          physicalFeaturesData:{} as Record<string,string>,
           reportedByName: '',
           reportedByDesignation: '',
           policeStation: '',
@@ -753,17 +808,45 @@ export default function MissingPersonForm() {
                   />
                 </div>
 
-                <div className="md:col-span-2 space-y-2">
-                  <label className="block text-sm font-medium text-slate-300">Physical Features</label>
-                  <textarea
-                    name="physicalFeatures"
-                    value={formData.physicalFeatures}
-                    onChange={handleChange}
-                    rows={3}
-                    className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-200 placeholder-slate-400 transition-all duration-300 resize-none"
-                    placeholder="Height, weight, scars, tattoos, distinctive features..."
-                  />
-                </div>
+               <div className="md:col-span-2 space-y-2">
+  <label className="block text-sm font-medium text-slate-300">
+    Physical Features
+  </label>
+
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+    {["Hair", "Eye Color", "Height", "Birthmark", "Other"].map(
+      (field) => (
+        <input
+          key={field}
+          type="text"
+          placeholder={`${field}...`}
+          onChange={(e) => {
+            // Update local features
+            const updated = {
+              ...formData.physicalFeaturesData,
+              [field.toLowerCase()]: e.target.value,
+            };
+
+            // Join all filled fields into one string with natural language
+              const combined = Object.entries(updated)
+              .filter(([_, v]) => (v as string).trim() !== "")
+              .map(([k, v]) => `The ${k} is ${v as string}`)
+              .join(". ") + (Object.keys(updated).filter(k => (updated[k] as string).trim() !== "").length > 0 ? "." : "");
+
+            // Update formData
+            setFormData({
+              ...formData,
+              physicalFeaturesData: updated,
+              physicalFeatures: combined,
+            });
+          }}
+          className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-xl text-slate-200 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        />
+      )
+    )}
+  </div>
+</div>
+
               </div>
             </div>
 
