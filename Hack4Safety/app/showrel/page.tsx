@@ -95,7 +95,39 @@ export default function SearchResultsDisplay() {
       ? 'bg-gradient-to-r from-green-500 to-emerald-500' 
       : 'bg-gradient-to-r from-red-500 to-pink-500';
   };
-
+const handleDeadDb = async () => {
+  try {
+    // Step 1: Fetch data from reverselookup API
+    const initialRes = await fetch("/api/reverselookup");
+    
+    if (!initialRes.ok) {
+      throw new Error(`Failed to fetch: ${initialRes.statusText}`);
+    }
+    
+    const dataToSend = await initialRes.json();
+    
+    // Step 2: Send the data to senddead API via POST
+    const sendDeadRes = await fetch("/api/senddead", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(dataToSend),
+    });
+    
+    if (!sendDeadRes.ok) {
+      throw new Error(`Failed to send data: ${sendDeadRes.statusText}`);
+    }
+    
+    const result = await sendDeadRes.json();
+    console.log("✅ Data sent successfully:", result);
+    
+    return result;
+  } catch (error) {
+    console.error("❌ Error in handleDeadDb:", error);
+    throw error;
+  }
+};
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 py-8 px-4 sm:px-6 lg:px-8 font-[Orbitron]">
       {/* Animated Background */}
@@ -325,6 +357,15 @@ export default function SearchResultsDisplay() {
             )}
           </>
         )}
+       <button
+       onClick={handleDeadDb}
+  className="px-6 py-3 rounded-full bg-gradient-to-r from-red-600 to-red-800 
+             text-white font-semibold shadow-lg hover:from-red-700 hover:to-red-900 
+             hover:shadow-red-500/30 transition-all duration-300 ease-in-out 
+             active:scale-95 mt-6"
+>
+  Couldnt find? Send it to us
+</button>
 
         {!loading && !error && !data && (
           <div className="text-center py-20 bg-slate-800/30 backdrop-blur-xl rounded-2xl border border-slate-700/50">

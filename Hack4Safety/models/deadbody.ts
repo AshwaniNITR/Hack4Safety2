@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const deadPersonSchema = new mongoose.Schema({
+const deadSchema = new mongoose.Schema({
   name: { type: String, required: true },
   age: { type: Number },
   gender: { type: String, enum: ["Male", "Female", "Other"] },
@@ -23,4 +23,4 @@ const deadPersonSchema = new mongoose.Schema({
 });
 
 export default mongoose.models.deadPerson ||
-  mongoose.model("deadPerson", deadPersonSchema);
+  mongoose.model("deadPerson", deadSchema);
