@@ -44,7 +44,7 @@ interface MissingPerson {
 // Function to get facial embeddings from your AI model
 const getFacialEmbedding = async (imageBuffer: Buffer): Promise<number[]> => {
   try {
-    const AI_MODEL_URL = process.env.AI_MODEL_URL;
+    const AI_MODEL_URL = "https://identiq-gpbgdmgua9gbf5gm.centralindia-01.azurewebsites.net";
     
     if (!AI_MODEL_URL) {
       console.error('AI_MODEL_URL is not configured in environment variables');
