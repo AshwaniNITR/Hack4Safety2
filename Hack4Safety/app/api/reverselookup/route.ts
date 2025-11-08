@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     pythonFormData.append('image', blob, image.name);
 
     console.log("Sending image to Python API for embedding extraction...");
-    const embeddingResponse = await fetch("http://localhost:5000/get_embeddings", {
+    const embeddingResponse = await fetch("https://identiq-gpbgdmgua9gbf5gm.centralindia-01.azurewebsites.net/get_embeddings", {
       method: "POST",
       body: pythonFormData
     });
