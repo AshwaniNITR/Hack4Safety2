@@ -19,6 +19,7 @@
     "lucide-react": "^0.552.0",
     "mongoose": "^8.19.3",
     "next": "16.0.1",
+    "nodemailer": "^7.0.10",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "recharts": "^3.3.0"
@@ -31,6 +32,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/lru-cache": "^7.10.9",
     "@types/node": "^20",
+    "@types/nodemailer": "^7.0.3",
     "@types/pbkdf2": "^3.1.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
