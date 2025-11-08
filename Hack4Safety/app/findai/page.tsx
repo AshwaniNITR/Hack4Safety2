@@ -96,7 +96,7 @@ export default function MissingPersonForm() {
       }
 
       const [response1] = await Promise.all([
-        fetch("/api/cosine", {
+        fetch("/api/reverselookup", {
           method: "POST",
           body: formDataToSend,
         }),
