@@ -2,9 +2,9 @@
 import { useState } from "react";
 import { Upload, User, MapPin, Camera, FileText, Send } from "lucide-react";
 import Navbar from "@/components/Navbar";
-
-
+import { useRouter } from "next/navigation";
 export default function MissingPersonForm() {
+  const router=useRouter();
   const [formData, setFormData] = useState({
     gender: "",
     address: "",
@@ -110,6 +110,7 @@ export default function MissingPersonForm() {
           type: "success",
           text: "Missing person report filed successfully! Our AI system is now processing the data.",
         });
+        router.push('/showrel');
         // Reset form
         setFormData({
           gender: "",
