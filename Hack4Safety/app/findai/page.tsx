@@ -18,6 +18,7 @@ export default function MissingPersonForm() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
   const [activeSection, setActiveSection] = useState(0);
+  
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -101,10 +102,10 @@ export default function MissingPersonForm() {
           body: formDataToSend,
         }),
       ]);
+      
 
       const result1 = await response1.json();
-     
-
+      localStorage.setItem("result1",JSON.stringify(result1));
       if (response1.ok) {
         setMessage({
           type: "success",

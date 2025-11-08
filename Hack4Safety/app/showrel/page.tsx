@@ -97,14 +97,15 @@ export default function SearchResultsDisplay() {
   };
 const handleDeadDb = async () => {
   try {
-    // Step 1: Fetch data from reverselookup API
-    const initialRes = await fetch("/api/reverselookup");
+    // Step 1: Get data from localStorage
+    const initialRes = localStorage.getItem("result1");
     
-    if (!initialRes.ok) {
-      throw new Error(`Failed to fetch: ${initialRes.statusText}`);
+    if (!initialRes) {
+      throw new Error('No result1 data found in localStorage');
     }
     
-    const dataToSend = await initialRes.json();
+    // Parse the JSON string back to an object
+    const dataToSend = JSON.parse(initialRes);
     
     // Step 2: Send the data to senddead API via POST
     const sendDeadRes = await fetch("/api/senddead", {
@@ -112,7 +113,7 @@ const handleDeadDb = async () => {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(dataToSend),
+      body: JSON.stringify(dataToSend), // Re-stringify for fetch
     });
     
     if (!sendDeadRes.ok) {

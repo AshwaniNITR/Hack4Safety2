@@ -1,7 +1,6 @@
 import mongoose from "mongoose";
 
 const deadSchema = new mongoose.Schema({
-  name: { type: String, required: true },
   age: { type: Number },
   gender: { type: String, enum: ["Male", "Female", "Other"] },
   address: { type: String || Float64Array },
@@ -12,7 +11,7 @@ const deadSchema = new mongoose.Schema({
   physicalFeatures: { type: String },
   imageUrl: { type: String, required: true }, // store Cloud/Local URL
   embedding: { type: [Number], required: true }, // from /get_embeddings
-  status: { type: String, enum: ["Missing", "Found"], default: "Missing" },
+  status: { type: String, enum: ["Unidentified", "Identified"], default: "Unidentified" },
   solvedAt:{type:Date, required:false, default:Date.now},
   reportFiledBy: {
     name: { type: String },
