@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getPineconeClient } from "@/app/libs/pineconeClient";
+import { getPineconeClient } from "@/libs/pineconeClient";
 
 export async function POST(req: Request) {
   try {

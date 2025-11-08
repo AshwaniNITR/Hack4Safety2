@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import MissingPerson from '@/models/missingPerson';
-import { uploadToCloudinary } from '@/app/libs/cloudinary';
+import { uploadToCloudinary } from '@/libs/cloudinary';
 
 // MongoDB connection
 const connectDB = async () => {

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { Pinecone } from "@pinecone-database/pinecone";
-import connectToDatabase from "@/app/libs/connectToDb";
+import connectToDatabase from "@/libs/connectToDb";
 import MissingPerson from "@/models/missingPerson";
 interface MissingPerson {
   _id: string;

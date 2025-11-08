@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import MissingPerson from "@/models/missingPerson";
 import foundPerson from "@/models/foundPerson";
-import connectToDatabase from "@/app/libs/connectToDb";
+import connectToDatabase from "@/libs/connectToDb";
 
 export async function PUT(
   request: NextRequest,

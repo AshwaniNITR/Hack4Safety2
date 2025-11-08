@@ -449,7 +449,7 @@
 
 import { useState } from 'react';
 import { Upload, User, MapPin, Camera, FileText, Send } from 'lucide-react';
-import Navbar from '../components/Navbar';
+import Navbar from '@/components/Navbar';
 
 export default function MissingPersonForm() {
   const [formData, setFormData] = useState({

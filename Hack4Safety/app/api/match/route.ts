@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import MissingPerson from "@/models/missingPerson";
 import * as fuzz from "fuzzball"; // npm i fuzzball
-import connectToDatabase from "@/app/libs/connectToDb";
+import connectToDatabase from "@/libs/connectToDb";
 
 // ---------------- Helper Functions ----------------
 
