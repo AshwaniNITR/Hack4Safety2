@@ -112,11 +112,11 @@ export default function Navbar() {
       href: "/findai",
       dropdown: [
         {
-          name: "Missing People",
+          name: "Missing Bodies",
           href: "/findai"
         },
         {
-          name: "Missing Bodies",
+          name: "Missing People",
           href: "/findai2"
         }
       ]
