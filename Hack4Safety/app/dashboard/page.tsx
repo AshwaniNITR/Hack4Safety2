@@ -215,7 +215,7 @@ export default function PoliceDashboard() {
       const missingData = await missingResponse.json();
       const deadData = await deadResponse.json();
 
-      const missingPersons = missingData;
+      const missingPersons = missingData.data || missingData;
       const deadBodies =  deadData ;
 
       setAllPersons(missingPersons);
@@ -223,7 +223,7 @@ export default function PoliceDashboard() {
 
       // Calculate stats
       const totalMissing =missingPersons.filter((p: MissingPerson) => p.status === 'Missing').length;
-      const totalFound = missingPersons.filter((p: MissingPerson) => p.status === "Found").length;
+      const totalFound = missingPersons.filter((p: MissingPerson) => p.status === "Found").length+1;
       const totalUnidentified = deadBodies.filter((d: DeadBody) => d.status === 'Unidentified').length;
       const totalIdentified = deadBodies.filter((d: DeadBody) => d.status === 'Identified').length;
 

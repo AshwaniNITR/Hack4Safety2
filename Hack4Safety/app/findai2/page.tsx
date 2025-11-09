@@ -111,7 +111,7 @@ export default function MissingPersonForm() {
           type: "success",
           text: "Missing person report filed successfully! Our AI system is now processing the data.",
         });
-        router.push('/showrel');
+        router.push('/showrel2');
         // Reset form
         setFormData({
           gender: "",

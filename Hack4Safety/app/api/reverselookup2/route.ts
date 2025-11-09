@@ -76,7 +76,7 @@ export async function POST(req: Request) {
     flaskFormData.append("image", image);
 
     const flaskResponse = await fetch(
-      "https://hacksfmodelfall-latest.onrender.com/get_embeddings",
+      "https://identiq-gpbgdmgua9gbf5gm.centralindia-01.azurewebsites.net//get_embeddings",
       { method: "POST", body: flaskFormData as any }
     );
     const flaskResult = await flaskResponse.json();
