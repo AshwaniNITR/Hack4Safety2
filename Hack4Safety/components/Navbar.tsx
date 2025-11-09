@@ -231,7 +231,7 @@ export default function Navbar() {
       <nav className="md:hidden fixed top-0 left-0 w-full bg-white/20 z-[60] font-[orbitron]">
         <div className="flex justify-between items-center h-16 px-4">
           {/* Logo */}
-          <Image src="/Identiq.jpg" className="rounded-lg" alt="Logo" width={50} height={50} />
+          <Image src="/Vector.png" className="rounded-lg" alt="Logo" width={50} height={50} />
 
           {/* Hamburger / Cross button */}
           <button
