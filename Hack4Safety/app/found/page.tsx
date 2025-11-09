@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { Search, Filter, X, Eye, MapPin, Calendar, User, Phone, Home } from 'lucide-react';
+import Navbar from '@/components/Navbar';
 
 interface MissingPerson {
   _id: string;
@@ -213,6 +214,7 @@ export default function UnidentifiedPersonsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 py-8 px-4 sm:px-6 lg:px-8 font-[Orbitron]">
+      <Navbar/>
       {/* Animated Background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-cyan-400/60 rounded-full animate-pulse" />

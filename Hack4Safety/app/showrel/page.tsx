@@ -1,6 +1,7 @@
 "use client"
 import { useState, useEffect } from 'react';
 import { Search, MapPin, User, RefreshCw, Clock, Shield, Navigation, Target } from 'lucide-react';
+import Navbar from '@/components/Navbar';
 
 export default function SearchResultsDisplay() {
   interface SearchResults {
@@ -131,6 +132,7 @@ const handleDeadDb = async () => {
 };
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 py-8 px-4 sm:px-6 lg:px-8 font-[Orbitron]">
+      <Navbar/>
       {/* Animated Background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-cyan-400/60 rounded-full animate-pulse" />

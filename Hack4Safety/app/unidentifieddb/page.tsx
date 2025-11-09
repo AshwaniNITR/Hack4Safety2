@@ -1,17 +1,15 @@
-// app/unidentified/page.tsx
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import Image from 'next/image';
-import { Search, Filter, X, Eye, MapPin, Calendar, User, Phone, Home } from 'lucide-react';
-import Navbar from '@/components/Navbar';
+import { useEffect, useState } from "react";
+import Image from "next/image";
+import { Search, Filter, MapPin, Calendar, User, Shield, Eye, X, AlertTriangle } from "lucide-react";
+import Navbar from "@/components/Navbar";
 
 
-interface MissingPerson {
+interface DeadPerson {
   _id: string;
-  name: string;
   age?: number;
-  gender?: string;
+  gender?: "Male" | "Female" | "Other";
   address?: string;
   contactNumber?: string;
   dateMissing: string;
@@ -19,96 +17,51 @@ interface MissingPerson {
   clothingDescription?: string;
   physicalFeatures?: string;
   imageUrl: string;
-  status: string;
+  status: "Unidentified" | "Identified";
+  solvedAt?: string;
   reportFiledBy?: {
     name?: string;
     designation?: string;
     policeStation?: string;
   };
   createdAt: string;
-  updatedAt: string;
-}
-
-interface Pagination {
-  total: number;
-  limit: number;
-  skip: number;
-  currentPage: number;
-  totalPages: number;
-  hasMore: boolean;
-}
-
-interface ApiResponse {
-  success: boolean;
-  data: MissingPerson[];
-  pagination: Pagination;
 }
 
 export default function UnidentifiedPersonsPage() {
-  const [missingPersons, setMissingPersons] = useState<MissingPerson[]>([]);
-  const [pagination, setPagination] = useState<Pagination | null>(null);
+  const [persons, setPersons] = useState<DeadPerson[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [searchInput, setSearchInput] = useState('');
-  const [selectedPerson, setSelectedPerson] = useState<MissingPerson | null>(null);
+  const [selectedPerson, setSelectedPerson] = useState<DeadPerson | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
-  const limit = 12;
 
-  const fetchMissingPersons = async (page: number, search: string = '') => {
+  useEffect(() => {
+    fetchUnidentifiedPersons();
+  }, []);
+
+  const fetchUnidentifiedPersons = async () => {
     try {
       setLoading(true);
-      setError(null);
+      const response = await fetch("/api/findalldead");
       
-      const skip = (page - 1) * limit;
-      const searchParam = search ? `&search=${encodeURIComponent(search)}` : '';
-      const response = await fetch(
-        `/api/unidentified?limit=${limit}&skip=${skip}${searchParam}`
-      );
-
       if (!response.ok) {
-        throw new Error('Failed to fetch missing persons');
+        throw new Error("Failed to fetch data");
       }
 
-      const result: ApiResponse = await response.json();
+      const data: DeadPerson[] = await response.json();
       
-      if (result.success) {
-        setMissingPersons(result.data);
-        setPagination(result.pagination);
-      } else {
-        throw new Error('Failed to load data');
-      }
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-      setMissingPersons([]);
+      // Filter only unidentified persons
+      const unidentified = data.filter(
+        (person) => person.status === "Unidentified"
+      );
+      
+      setPersons(unidentified);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchMissingPersons(currentPage, searchTerm);
-  }, [currentPage, searchTerm]);
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSearchTerm(searchInput);
-    setCurrentPage(1);
-  };
-
-  const handlePageChange = (newPage: number) => {
-    setCurrentPage(newPage);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-IN', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
   };
 
   const truncateText = (text: string, wordLimit: number) => {
@@ -127,7 +80,7 @@ export default function UnidentifiedPersonsPage() {
     setExpandedCards(newExpanded);
   };
 
-  const openModal = (person: MissingPerson) => {
+  const openModal = (person: DeadPerson) => {
     setSelectedPerson(person);
     setIsModalOpen(true);
   };
@@ -137,9 +90,47 @@ export default function UnidentifiedPersonsPage() {
     setSelectedPerson(null);
   };
 
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-IN', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+
+  const filteredPersons = persons.filter(person =>
+    person.placeLastSeen?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    person.physicalFeatures?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    person.clothingDescription?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    person.reportFiledBy?.policeStation?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-cyan-400 mx-auto mb-4"></div>
+          <p className="text-slate-300 text-lg">Loading Unidentified Cases...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
+        <div className="bg-red-900/20 border border-red-500/30 text-red-300 px-6 py-4 rounded-2xl backdrop-blur-xl max-w-md text-center">
+          <AlertTriangle className="w-12 h-12 mx-auto mb-4" />
+          <p className="text-xl font-semibold mb-2">Database Error</p>
+          <p>{error}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 py-8 px-4 sm:px-6 lg:px-8 font-[Orbitron]">
-      <Navbar/>
+        <Navbar/>
       {/* Animated Background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-cyan-400/60 rounded-full animate-pulse" />
@@ -152,94 +143,54 @@ export default function UnidentifiedPersonsPage() {
         <div className="text-center mb-12">
           <h1 className="text-5xl font-bold mb-4">
             <span className="bg-gradient-to-r from-blue-400 via-cyan-300 to-blue-500 bg-clip-text text-transparent">
-              Missing Persons Database
+              Unidentified Persons
             </span>
           </h1>
           <p className="text-xl text-slate-300 font-light">
-            AI-powered facial recognition for identifying missing individuals
+            Cases awaiting identification through AI facial recognition
           </p>
         </div>
 
         {/* Search Bar */}
         <div className="mb-8">
-          <form onSubmit={handleSearch} className="flex gap-3">
-            <div className="flex-1 relative">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
-              <input
-                type="text"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Search by name, location, or features..."
-                className="w-full pl-12 pr-4 py-4 bg-slate-800/50 border border-slate-600 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-200 placeholder-slate-400 backdrop-blur-xl transition-all duration-300"
-              />
-            </div>
-            <button
-              type="submit"
-              className="px-8 py-4 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-medium rounded-2xl hover:from-blue-600 hover:to-cyan-600 transition-all duration-300 flex items-center space-x-2"
-            >
-              <Search size={20} />
-              <span>Search</span>
-            </button>
-            {searchTerm && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchInput('');
-                  setSearchTerm('');
-                  setCurrentPage(1);
-                }}
-                className="px-6 py-4 bg-slate-700/50 text-slate-300 rounded-2xl hover:bg-slate-600/50 transition-all duration-300 flex items-center space-x-2"
-              >
-                <X size={20} />
-                <span>Clear</span>
-              </button>
-            )}
-          </form>
+          <div className="relative max-w-2xl mx-auto">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search by location, features, clothing, or police station..."
+              className="w-full pl-12 pr-4 py-4 bg-slate-800/50 border border-slate-600 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-200 placeholder-slate-400 backdrop-blur-xl transition-all duration-300"
+            />
+          </div>
         </div>
 
         {/* Statistics */}
-        {pagination && (
-          <div className="mb-8 p-6 bg-slate-800/30 backdrop-blur-xl rounded-2xl border border-slate-700/50">
-            <div className="flex flex-wrap items-center justify-between">
-              <p className="text-slate-300">
-                Showing <span className="font-bold text-cyan-300">{missingPersons.length}</span> of{' '}
-                <span className="font-bold text-blue-300">{pagination.total}</span> records
-                {searchTerm && (
-                  <span className="text-cyan-300"> matching "{searchTerm}"</span>
-                )}
-              </p>
-              <div className="flex items-center space-x-4 text-sm text-slate-400">
-                <span>Page {currentPage} of {pagination.totalPages}</span>
-              </div>
+        <div className="mb-8 p-6 bg-slate-800/30 backdrop-blur-xl rounded-2xl border border-slate-700/50">
+          <div className="flex flex-wrap items-center justify-between">
+            <p className="text-slate-300">
+              Showing <span className="font-bold text-cyan-300">{filteredPersons.length}</span> of{' '}
+              <span className="font-bold text-blue-300">{persons.length}</span> unidentified cases
+              {searchTerm && (
+                <span className="text-cyan-300"> matching "{searchTerm}"</span>
+              )}
+            </p>
+            <div className="flex items-center space-x-4 text-sm text-slate-400">
+              <span className="flex items-center space-x-1">
+                <AlertTriangle className="w-4 h-4 text-red-400" />
+                <span>All cases require identification</span>
+              </span>
             </div>
           </div>
-        )}
-
-        {/* Loading State */}
-        {loading && (
-          <div className="flex justify-center items-center py-20">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-cyan-400 mx-auto mb-4"></div>
-              <p className="text-slate-300">Scanning database with AI...</p>
-            </div>
-          </div>
-        )}
-
-        {/* Error State */}
-        {error && (
-          <div className="bg-red-900/20 border border-red-500/30 text-red-300 px-6 py-4 rounded-2xl mb-6 backdrop-blur-xl">
-            <p className="font-semibold">Database Connection Error:</p>
-            <p>{error}</p>
-          </div>
-        )}
+        </div>
 
         {/* No Results */}
-        {!loading && !error && missingPersons.length === 0 && (
+        {!loading && !error && filteredPersons.length === 0 && (
           <div className="text-center py-20 bg-slate-800/30 backdrop-blur-xl rounded-2xl border border-slate-700/50">
             <div className="w-24 h-24 bg-slate-700/50 rounded-full flex items-center justify-center mx-auto mb-4">
-              <User className="w-12 h-12 text-slate-400" />
+              <Search className="w-12 h-12 text-slate-400" />
             </div>
-            <p className="text-slate-300 text-lg mb-2">No missing persons found</p>
+            <p className="text-slate-300 text-lg mb-2">No unidentified persons found</p>
             {searchTerm && (
               <p className="text-slate-400">Try adjusting your search terms</p>
             )}
@@ -247,21 +198,21 @@ export default function UnidentifiedPersonsPage() {
         )}
 
         {/* Cards Grid */}
-        {!loading && !error && missingPersons.length > 0 && (
+        {!loading && !error && filteredPersons.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
-            {missingPersons.map((person) => {
+            {filteredPersons.map((person) => {
               const isExpanded = expandedCards.has(person._id);
               return (
                 <div
                   key={person._id}
-                  className="group bg-slate-800/30 backdrop-blur-xl rounded-2xl border border-slate-700/50 overflow-hidden hover:border-cyan-500/30 hover:shadow-2xl hover:shadow-cyan-500/10 transition-all duration-500 cursor-pointer"
+                  className="group bg-slate-800/30 backdrop-blur-xl rounded-2xl border border-slate-700/50 overflow-hidden hover:border-red-500/30 hover:shadow-2xl hover:shadow-red-500/10 transition-all duration-500 cursor-pointer"
                   onClick={() => openModal(person)}
                 >
                   {/* Image with Status */}
                   <div className="relative h-48 bg-slate-700/50 overflow-hidden">
                     <Image
                       src={person.imageUrl}
-                      alt={person.name}
+                      alt="Unidentified person"
                       fill
                       className="object-cover group-hover:scale-105 transition-transform duration-500"
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
@@ -288,20 +239,16 @@ export default function UnidentifiedPersonsPage() {
 
                   {/* Content */}
                   <div className="p-4">
-                    <h3 className="text-lg font-bold text-slate-200 mb-3 group-hover:text-cyan-300 transition-colors">
-                      {person.name}
-                    </h3>
-                    
-                    <div className="space-y-2 text-sm">
+                    <div className="space-y-3">
                       <div className="flex items-center space-x-2 text-slate-400">
                         <Calendar size={14} />
-                        <span>{formatDate(person.dateMissing)}</span>
+                        <span className="text-sm">{formatDate(person.dateMissing)}</span>
                       </div>
                       
                       {person.placeLastSeen && (
                         <div className="flex items-center space-x-2 text-slate-400">
                           <MapPin size={14} />
-                          <span className={isExpanded ? '' : 'line-clamp-1'}>
+                          <span className={isExpanded ? 'text-sm' : 'text-sm line-clamp-1'}>
                             {isExpanded ? person.placeLastSeen : truncateText(person.placeLastSeen, 8)}
                           </span>
                         </div>
@@ -310,15 +257,25 @@ export default function UnidentifiedPersonsPage() {
                       {person.age && (
                         <div className="flex items-center space-x-2 text-slate-400">
                           <User size={14} />
-                          <span>{person.age} years {person.gender && `• ${person.gender}`}</span>
+                          <span className="text-sm">{person.age} years {person.gender && `• ${person.gender}`}</span>
                         </div>
                       )}
+
+                      {/* AI Identification Needed */}
+                      <div className="flex items-center space-x-2 text-slate-400">
+                        <Shield size={14} />
+                        <span className="text-red-400 text-xs font-medium">
+                          AI Identification Required
+                        </span>
+                      </div>
                       
                       {person.physicalFeatures && (
                         <div className="text-slate-400">
-                          <span className="font-medium text-slate-300">Features: </span>
-                          {isExpanded ? person.physicalFeatures : truncateText(person.physicalFeatures, 15)}
-                          {person.physicalFeatures.split(' ').length > 15 && (
+                          <span className="font-medium text-slate-300 text-sm">Features: </span>
+                          <span className="text-sm">
+                            {isExpanded ? person.physicalFeatures : truncateText(person.physicalFeatures, 12)}
+                          </span>
+                          {person.physicalFeatures.split(' ').length > 12 && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -334,9 +291,11 @@ export default function UnidentifiedPersonsPage() {
                       
                       {person.clothingDescription && (
                         <div className="text-slate-400">
-                          <span className="font-medium text-slate-300">Clothing: </span>
-                          {isExpanded ? person.clothingDescription : truncateText(person.clothingDescription, 12)}
-                          {person.clothingDescription.split(' ').length > 12 && (
+                          <span className="font-medium text-slate-300 text-sm">Clothing: </span>
+                          <span className="text-sm">
+                            {isExpanded ? person.clothingDescription : truncateText(person.clothingDescription, 10)}
+                          </span>
+                          {person.clothingDescription.split(' ').length > 10 && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -356,60 +315,6 @@ export default function UnidentifiedPersonsPage() {
             })}
           </div>
         )}
-
-        {/* Pagination */}
-        {pagination && pagination.totalPages > 1 && (
-          <div className="flex justify-center items-center gap-3">
-            <button
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="px-6 py-3 bg-slate-800/50 border border-slate-600 rounded-xl disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-700/50 text-slate-300 transition-all duration-300 flex items-center space-x-2"
-            >
-              <span>Previous</span>
-            </button>
-            
-            <div className="flex gap-1">
-              {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
-                .filter((page) => {
-                  return (
-                    page === 1 ||
-                    page === pagination.totalPages ||
-                    Math.abs(page - currentPage) <= 1
-                  );
-                })
-                .map((page, index, array) => {
-                  const prevPage = array[index - 1];
-                  const showEllipsis = prevPage && page - prevPage > 1;
-                  
-                  return (
-                    <div key={page} className="flex gap-1">
-                      {showEllipsis && (
-                        <span className="px-3 py-2 text-slate-500">...</span>
-                      )}
-                      <button
-                        onClick={() => handlePageChange(page)}
-                        className={`px-4 py-2 rounded-xl transition-all duration-300 ${
-                          currentPage === page
-                            ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg shadow-blue-500/25'
-                            : 'bg-slate-800/50 border border-slate-600 text-slate-300 hover:bg-slate-700/50'
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    </div>
-                  );
-                })}
-            </div>
-            
-            <button
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={!pagination.hasMore}
-              className="px-6 py-3 bg-slate-800/50 border border-slate-600 rounded-xl disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-700/50 text-slate-300 transition-all duration-300 flex items-center space-x-2"
-            >
-              <span>Next</span>
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Modal */}
@@ -421,13 +326,13 @@ export default function UnidentifiedPersonsPage() {
               <div className="flex justify-between items-start mb-6">
                 <div>
                   <h2 className="text-3xl font-bold text-slate-200 mb-2">
-                    {selectedPerson.name}
+                    Unidentified Person Case
                   </h2>
                   <div className="flex items-center space-x-4 text-slate-400">
                     <span className="px-3 py-1 bg-gradient-to-r from-red-500 to-pink-500 text-white text-sm font-bold rounded-full">
                       {selectedPerson.status}
                     </span>
-                    <span>Missing since {formatDate(selectedPerson.dateMissing)}</span>
+                    <span>Reported on {formatDate(selectedPerson.createdAt)}</span>
                   </div>
                 </div>
                 <button
@@ -444,7 +349,7 @@ export default function UnidentifiedPersonsPage() {
                   <div className="relative h-80 bg-slate-700/50 rounded-2xl overflow-hidden">
                     <Image
                       src={selectedPerson.imageUrl}
-                      alt={selectedPerson.name}
+                      alt="Unidentified person"
                       fill
                       className="object-cover"
                       sizes="(max-width: 1024px) 100vw, 50vw"
@@ -457,7 +362,7 @@ export default function UnidentifiedPersonsPage() {
                       <div className="bg-slate-700/50 rounded-xl p-4 text-center">
                         <User className="w-6 h-6 text-cyan-400 mx-auto mb-2" />
                         <div className="text-slate-300 font-bold">{selectedPerson.age} years</div>
-                        <div className="text-slate-400 text-sm">Age</div>
+                        <div className="text-slate-400 text-sm">Estimated Age</div>
                       </div>
                     )}
                     
@@ -469,56 +374,57 @@ export default function UnidentifiedPersonsPage() {
                       </div>
                     )}
                   </div>
+
+                  {/* AI Action Required */}
+                  <div className="bg-red-900/20 border border-red-500/30 rounded-xl p-4">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Shield className="w-5 h-5 text-red-400" />
+                      <div className="text-slate-300 font-medium">AI Identification Required</div>
+                    </div>
+                    <div className="text-slate-400 text-sm">
+                      This case requires facial recognition matching with missing persons database
+                    </div>
+                  </div>
                 </div>
 
                 {/* Details */}
                 <div className="space-y-6">
-                  {/* Personal Information */}
+                  {/* Case Information */}
                   <div className="space-y-4">
                     <h3 className="text-xl font-bold text-slate-200 border-b border-slate-600 pb-2">
-                      Personal Information
+                      Case Information
                     </h3>
                     
-                    {selectedPerson.contactNumber && (
-                      <div className="flex items-center space-x-3">
-                        <Phone className="w-5 h-5 text-cyan-400" />
-                        <div>
-                          <div className="text-slate-300 font-medium">Contact Number</div>
-                          <div className="text-slate-400">{selectedPerson.contactNumber}</div>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {selectedPerson.address && (
+                    <div className="space-y-3">
                       <div className="flex items-start space-x-3">
-                        <Home className="w-5 h-5 text-blue-400 mt-0.5" />
+                        <Calendar className="w-5 h-5 text-cyan-400 mt-0.5" />
                         <div>
-                          <div className="text-slate-300 font-medium">Address</div>
-                          <div className="text-slate-400">{selectedPerson.address}</div>
+                          <div className="text-slate-300 font-medium">Date Reported Missing</div>
+                          <div className="text-slate-400">{formatDate(selectedPerson.dateMissing)}</div>
                         </div>
                       </div>
-                    )}
+                      
+                      {selectedPerson.placeLastSeen && (
+                        <div className="flex items-start space-x-3">
+                          <MapPin className="w-5 h-5 text-green-400 mt-0.5" />
+                          <div>
+                            <div className="text-slate-300 font-medium">Last Known Location</div>
+                            <div className="text-slate-400">{selectedPerson.placeLastSeen}</div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
-                  {/* Missing Details */}
+                  {/* Physical Description */}
                   <div className="space-y-4">
                     <h3 className="text-xl font-bold text-slate-200 border-b border-slate-600 pb-2">
-                      Missing Details
+                      Physical Description
                     </h3>
-                    
-                    {selectedPerson.placeLastSeen && (
-                      <div className="flex items-start space-x-3">
-                        <MapPin className="w-5 h-5 text-green-400 mt-0.5" />
-                        <div>
-                          <div className="text-slate-300 font-medium">Last Seen At</div>
-                          <div className="text-slate-400">{selectedPerson.placeLastSeen}</div>
-                        </div>
-                      </div>
-                    )}
                     
                     {selectedPerson.physicalFeatures && (
                       <div>
-                        <div className="text-slate-300 font-medium mb-2">Physical Features</div>
+                        <div className="text-slate-300 font-medium mb-2">Distinctive Features</div>
                         <div className="text-slate-400 bg-slate-700/30 rounded-xl p-4">
                           {selectedPerson.physicalFeatures}
                         </div>
@@ -571,9 +477,7 @@ export default function UnidentifiedPersonsPage() {
                 >
                   Close
                 </button>
-                {/* <button className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-xl hover:from-cyan-600 hover:to-blue-600 transition-all duration-300">
-                  Run AI Match
-                </button> */}
+              
               </div>
             </div>
           </div>

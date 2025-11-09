@@ -6,16 +6,18 @@ import connectToDatabase from "@/libs/connectToDb";
 
 export async function PUT(
   request: NextRequest,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectToDatabase();
 
-    const { id } = context.params;
+    const { id } =await context.params;
+    console.log(id);
     const body = await request.json();
+    console.log(body);
     
     const {
-      foundDate,
+      solvedAt,
       foundLocation,
       foundPolice,
       contactType,
@@ -23,7 +25,7 @@ export async function PUT(
     } = body;
 
     // Validate required fields
-    if (!foundDate || !foundLocation || !foundPolice || !contactValue) {
+    if (!solvedAt || !foundLocation || !foundPolice || !contactValue) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -62,7 +64,7 @@ export async function PUT(
       dateMissing: missingPerson.dateMissing,
       imageUrl: missingPerson.imageUrl,
       status: "Found",
-      solvedAt: new Date(foundDate),
+      solvedAt: new Date(solvedAt),
       foundPolice: foundPolice,
       foundLocation: foundLocation,
       contactType: contactType,

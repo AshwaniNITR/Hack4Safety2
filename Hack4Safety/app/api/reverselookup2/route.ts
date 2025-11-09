@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import MissingPerson from "@/models/missingPerson";
-import deadPerson from "@/models/deadbody";
+//import deadPerson from "@/models/deadbody";
 import connectToDatabase from "@/libs/connectToDb";
 import { getCoordinates } from "@/utils/geocode";
 
@@ -95,7 +95,7 @@ export async function POST(req: Request) {
     if (gender) query.gender = gender;
     //if (!isNaN(age)) query.age = { $gte: age - 20, $lte: age + 20 };
 
-    const allPersons = await deadPerson.find(query, { embedding: 1, address: 1 });
+    const allPersons = await MissingPerson.find(query, { embedding: 1, address: 1 });
 
     if (!allPersons.length) {
       return NextResponse.json({ error: "No matching records by gender/age" }, { status: 404 });
@@ -153,7 +153,7 @@ export async function POST(req: Request) {
       .slice(0, 3);
 
     // ✅ Step 5 — Fetch full person details
-    const matchedPersons = await deadPerson.find({
+    const matchedPersons = await MissingPerson.find({
       _id: { $in: top3.map((p) => new mongoose.Types.ObjectId(p.id)) },
     }).lean();
 

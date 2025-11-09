@@ -56,7 +56,7 @@ const ANIMATIONS = {
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState<boolean>(false);
-  const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
+  const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close on Esc
@@ -76,7 +76,7 @@ export default function Navbar() {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setDropdownOpen(false);
+        setDropdownOpen(null);
       }
     };
 
@@ -85,21 +85,43 @@ export default function Navbar() {
   }, []);
 
   const toggleMenu = () => setIsOpen((v: boolean) => !v);
-  const toggleDropdown = () => setDropdownOpen((v: boolean) => !v);
+  const toggleDropdown = (itemName: string) => {
+    setDropdownOpen(prev => prev === itemName ? null : itemName);
+  };
 
   const menuItems: MenuItem[] = [
     { name: "Home", href: "/" },
     { name: "About", href: "#about" },
     { name: "Report Missing Person", href: "/report" },
-    { name: "Unidentified Cases", href: "/unidentified" },
     { 
-      name: "AI Match Finder", 
-      href: "/",
+      name: "Unidentified Cases", 
+      href: "/unidentified",
+      dropdown: [
+        {
+          name: "Unidentified Persons",
+          href: "/unidentified"
+        },
+        {
+          name: "Unidentified Bodies",
+          href: "/unidentifiedbb"
+        }
+      ]
+    },
+    { 
+      name: "Search with AI", 
+      href: "/findai",
+      dropdown: [
+        {
+          name: "Missing People",
+          href: "/findai"
+        },
+        {
+          name: "Missing Bodies",
+          href: "/findai2"
+        }
+      ]
     },
     { name: "Dashboard", href: "/dashboard" },
-    // { name: "Events", href: "#events" },
-    // { name: "Contacts", href: "#contacts" },
-    // { name: "Gallery", href: "#gallery" },
   ];
 
   const handleMenuItemClick = (item: MenuItem) => {
@@ -110,7 +132,7 @@ export default function Navbar() {
 
   const handleDropdownItemClick = () => {
     setIsOpen(false);
-    setDropdownOpen(false);
+    setDropdownOpen(null);
   };
 
   const renderMenuItem = (item: MenuItem, isMobile: boolean = false) => {
@@ -149,12 +171,12 @@ export default function Navbar() {
       return (
         <div key={item.name} className="relative" ref={dropdownRef}>
           <button
-            onClick={toggleDropdown}
+            onClick={() => toggleDropdown(item.name)}
             className="text-xl md:text-2xl text-white hover:text-blue-300 transition-colors py-2 px-6 rounded-lg hover:bg-white/5 flex items-center gap-2"
           >
             {item.name}
             <motion.span
-              animate={{ rotate: dropdownOpen ? 180 : 0 }}
+              animate={{ rotate: dropdownOpen === item.name ? 180 : 0 }}
               transition={{ duration: 0.3 }}
               className="text-sm"
             >
@@ -163,7 +185,7 @@ export default function Navbar() {
           </button>
           
           <AnimatePresence>
-            {dropdownOpen && (
+            {dropdownOpen === item.name && (
               <motion.div
                 variants={ANIMATIONS.dropdown}
                 initial="hidden"
