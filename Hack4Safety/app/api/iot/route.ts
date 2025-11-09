@@ -31,6 +31,40 @@ function haversine(lat1: number, lon1: number, lat2: number, lon2: number) {
   return R * c;
 }
 
+// Send notification to mail_nodes endpoint
+async function sendNotification(
+  image: File,
+  lat: number,
+  lon: number,
+) {
+  try {
+    const notificationFormData = new FormData();
+    notificationFormData.append("image", image);
+    notificationFormData.append("lat", lat.toString());
+    notificationFormData.append("lon", lon.toString());
+
+    const notificationResponse = await fetch(
+      `/api/mail_nodes/notification`,
+      {
+        method: "POST",
+        body: notificationFormData as any,
+      }
+    );
+
+    if (!notificationResponse.ok) {
+      const errorText = await notificationResponse.text();
+      console.error("❌ Failed to send notification:", errorText);
+      return false;
+    }
+
+    console.log("✅ Notification sent successfully");
+    return true;
+  } catch (error) {
+    console.error("❌ Error sending notification:", error);
+    return false;
+  }
+}
+
 // ------------------ GET endpoint ------------------
 
 export async function GET(req: Request) {
@@ -164,6 +198,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Person not found" }, { status: 404 });
     }
 
+    // ✅ Step 6.5 — Send notification to mail_nodes
+    let notificationSent = false;
+    try {
+      notificationSent = await sendNotification(
+        image,
+        lat,
+        lon,
+      );
+    } catch (notifError) {
+      // Log but don't fail the main request
+      console.error("❌ Notification error:", notifError);
+    }
+
     // ✅ Step 7 — Combine result
     const result = {
       ...matchedPerson,
@@ -171,6 +218,7 @@ export async function POST(req: Request) {
       distanceKm: bestMatch.distanceKm,
       finalScore: bestMatch.score,
       averageScore: bestMatch.averageScore,
+      notificationSent, // Track if notification was sent
     };
 
     // ✅ Store the result for GET endpoint with metadata
@@ -183,6 +231,7 @@ export async function POST(req: Request) {
       timestamp: new Date().toISOString(),
       totalCandidates: candidates.length,
       validCandidates: validCandidates.length,
+      notificationSent,
     };
 
     return NextResponse.json({ match: result });

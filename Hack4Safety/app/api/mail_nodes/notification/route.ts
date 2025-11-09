@@ -1,145 +1,50 @@
 import { NextRequest, NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
-import mongoose, { Schema, Document } from 'mongoose';
 
 // ==================== TYPES ====================
 interface NotificationRequest {
-  name: string;
+  image: File;
   lat: number;
   lon: number;
 }
 
-interface OrganizationWithDistance {
+interface Organization {
   name: string;
   email: string;
   type: 'hospital' | 'municipality' | 'ngo';
   lat: number;
   lon: number;
+  phone?: string;
+  address?: string;
+}
+
+interface OrganizationWithDistance extends Organization {
   distance: number;
-  phone?: string;
-  address?: string;
 }
 
-// ==================== DATABASE CONNECTION ====================
-const connectToDatabase = async () => {
-  if (mongoose.connection.readyState >= 1) return;
-
-  try {
-    await mongoose.connect(process.env.MONGO_URI!, {
-      dbName: "test",
-    });
-    console.log("✅ Connected to MongoDB");
-  } catch (error) {
-    console.error("❌ MongoDB connection error:", error);
-    throw error;
-  }
-};
-
-// ==================== MONGOOSE MODELS ====================
-
-// Organization Schema
-interface IOrganization extends Document {
-  name: string;
-  email: string;
-  type: 'hospital' | 'municipality' | 'ngo';
-  lat: number;
-  lon: number;
-  address?: string;
-  phone?: string;
-  active: boolean;
-}
-
-const OrganizationSchema = new Schema<IOrganization>(
+// ==================== HARDCODED ORGANIZATIONS ====================
+// Replace this with your actual organization data
+const ORGANIZATIONS: Organization[] = [
   {
-    name: { type: String, required: true, trim: true },
-    email: { type: String, required: true, trim: true, lowercase: true },
-    type: { type: String, required: true, enum: ['hospital', 'municipality', 'ngo'] },
-    lat: { type: Number, required: true, min: -90, max: 90 },
-    lon: { type: Number, required: true, min: -180, max: 180 },
-    address: { type: String, trim: true },
-    phone: { type: String, trim: true },
-    active: { type: Boolean, default: true },
+    name: 'City General Hospital',
+    email: 'contact@cityhospital.com',
+    type: 'hospital',
+    lat: 22.2587,
+    lon: 84.8537,
+    address: 'Main Road, Rourkela',
+    phone: '+91-1234567890',
   },
-  { timestamps: true }
-);
-
-const Organization = mongoose.models.Organization || 
-  mongoose.model<IOrganization>('Organization', OrganizationSchema);
-
-// Notification Schema - For Missing Person Found Reports
-interface INotification extends Document {
-  name: string;
-  lat: number;
-  lon: number;
-  status: 'pending' | 'sent' | 'failed';
-  notificationsSent?: number;
-  notificationsFailed?: number;
-  recipientCount?: number;
-}
-
-const NotificationSchema = new Schema<INotification>(
   {
-    name: { type: String, required: true, trim: true },
-    lat: { type: Number, required: true, min: -90, max: 90 },
-    lon: { type: Number, required: true, min: -180, max: 180 },
-    status: { 
-      type: String, 
-      enum: ['pending', 'sent', 'failed'], 
-      default: 'pending' 
-    },
-    notificationsSent: { type: Number, default: 0 },
-    notificationsFailed: { type: Number, default: 0 },
-    recipientCount: { type: Number, default: 0 },
+    name: 'Municipal Corporation',
+    email: 'info@municipality.gov',
+    type: 'municipality',
+    lat: 22.2497,
+    lon: 84.8500,
+    address: 'Civil Township, Rourkela',
+    phone: '+91-0987654321',
   },
-  { timestamps: true }
-);
-
-// Post-save middleware to trigger notifications automatically when missing person is found
-NotificationSchema.post('save', async function (doc: INotification) {
-  if (this.isNew && doc.status === 'pending') {
-    try {
-      console.log('🆕 Missing person found! Triggering email alerts...');
-      
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/notifications`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: doc.name,
-            lat: doc.lat,
-            lon: doc.lon,
-          }),
-        }
-      );
-      
-      if (response.ok) {
-        const result = await response.json();
-        console.log('✅ Email notifications sent:', result);
-        
-        // Update without triggering another save hook
-        await Notification.updateOne(
-          { _id: doc._id },
-          {
-            status: 'sent',
-            notificationsSent: result.notificationsSent || 0,
-            notificationsFailed: result.notificationsFailed || 0,
-            recipientCount: result.recipientCount || 0,
-          }
-        );
-      } else {
-        console.error('❌ Failed to send notifications');
-        await Notification.updateOne({ _id: doc._id }, { status: 'failed' });
-      }
-    } catch (error) {
-      console.error('❌ Error triggering notifications:', error);
-      await Notification.updateOne({ _id: doc._id }, { status: 'failed' });
-    }
-  }
-});
-
-const Notification = mongoose.models.Notification || 
-  mongoose.model<INotification>('Notification', NotificationSchema);
+  // Add more organizations as needed
+];
 
 // ==================== HELPER FUNCTIONS ====================
 
@@ -198,27 +103,41 @@ function createEmailTransporter() {
     port: 587,
     secure: false,
     auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASSWORD,
+      user: "senapatiashwani47@gmail.com",
+      pass: "itpyloblbzojkfup",
     },
   });
+}
+
+// Convert File to base64 for email attachment
+async function fileToBase64(file: File): Promise<string> {
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  return buffer.toString('base64');
 }
 
 // ==================== EMAIL NOTIFICATION FUNCTION ====================
 async function sendNotifications(
   recipients: OrganizationWithDistance[],
-  personData: NotificationRequest
+  imageFile: File,
+  lat: number,
+  lon: number
 ): Promise<{ success: boolean; sent: number; failed: number }> {
   const transporter = createEmailTransporter();
   
   let sent = 0;
   let failed = 0;
   
+  // Convert image to base64 for attachment
+  const imageBase64 = await fileToBase64(imageFile);
+  const imageName = imageFile.name || 'found-person.jpg';
+  const imageMimeType = imageFile.type || 'image/jpeg';
+  
   const emailPromises = recipients.map(async (recipient) => {
     const mailOptions = {
       from: process.env.SMTP_USER,
       to: 'hrushikeshsarangi7@gmail.com', // All emails sent to this address
-      subject: `🔍 MISSING PERSON FOUND - ${personData.name} - ${recipient.distance.toFixed(1)}km from ${recipient.name}`,
+      subject: `🔍 MISSING PERSON FOUND - ${recipient.distance.toFixed(1)}km from ${recipient.name}`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -255,6 +174,19 @@ async function sendNotifications(
               min-width: 140px;
             }
             .info-value { color: #212529; }
+            .image-box {
+              text-align: center;
+              margin: 20px 0;
+              padding: 15px;
+              background-color: #f8f9fa;
+              border-radius: 8px;
+            }
+            .image-box img {
+              max-width: 100%;
+              height: auto;
+              border-radius: 8px;
+              box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            }
             .button { 
               display: inline-block; 
               padding: 12px 30px; 
@@ -298,19 +230,19 @@ async function sendNotifications(
             </div>
             
             <div class="content">
+              <div class="image-box">
+                <h3 style="margin-top: 0; color: #007bff;">📸 Person Found - Photo Attached</h3>
+                <p style="color: #6c757d; font-size: 14px;">The image of the found person is attached to this email</p>
+              </div>
+
               <div class="info-box">
                 <h2 style="margin-top: 0; color: #007bff; font-size: 20px;">
-                  👤 Person Found - Details
+                  📍 Location Details
                 </h2>
                 
                 <div class="info-row">
-                  <span class="info-label">Person's Name:</span>
-                  <span class="info-value" style="font-size: 16px; font-weight: bold; color: #007bff;">${personData.name}</span>
-                </div>
-                
-                <div class="info-row">
                   <span class="info-label">Found Location:</span>
-                  <span class="info-value">${personData.lat.toFixed(6)}°, ${personData.lon.toFixed(6)}°</span>
+                  <span class="info-value">${lat.toFixed(6)}°, ${lon.toFixed(6)}°</span>
                 </div>
                 
                 <div class="info-row">
@@ -351,12 +283,12 @@ async function sendNotifications(
               </div>
               
               <div style="text-align: center; margin: 25px 0;">
-                <a href="https://www.google.com/maps/dir/?api=1&origin=${recipient.lat},${recipient.lon}&destination=${personData.lat},${personData.lon}" 
+                <a href="https://www.google.com/maps/dir/?api=1&origin=${recipient.lat},${recipient.lon}&destination=${lat},${lon}" 
                    class="button">
                   🗺️ Get Directions to Location
                 </a>
                 <br>
-                <a href="https://www.google.com/maps?q=${personData.lat},${personData.lon}" 
+                <a href="https://www.google.com/maps?q=${lat},${lon}" 
                    class="button" style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);">
                   📍 View Location on Map
                 </a>
@@ -367,6 +299,7 @@ async function sendNotifications(
                 A missing person has been found at the coordinates above. Please:
                 <ul style="margin: 10px 0; padding-left: 20px;">
                   <li>Dispatch emergency response team immediately</li>
+                  <li>Review the attached photo to identify the person</li>
                   <li>Contact the person's family/authorities</li>
                   <li>Provide necessary assistance</li>
                   <li>Coordinate with other responding organizations</li>
@@ -392,12 +325,13 @@ async function sendNotifications(
 🔍 MISSING PERSON FOUND - URGENT NOTIFICATION
 ═══════════════════════════════════════════
 
-PERSON DETAILS:
+LOCATION DETAILS:
 ─────────────────────────────────────────
-Name: ${personData.name}
-Found Location: ${personData.lat.toFixed(6)}°, ${personData.lon.toFixed(6)}°
+Found Location: ${lat.toFixed(6)}°, ${lon.toFixed(6)}°
 Distance from ${recipient.name}: ${recipient.distance.toFixed(2)} km
 Time Found: ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST
+
+📸 PHOTO: Attached to this email
 
 RESPONDING ORGANIZATION:
 ─────────────────────────────────────────
@@ -408,11 +342,12 @@ ${recipient.phone ? `Phone: ${recipient.phone}` : ''}
 
 LOCATION LINKS:
 ─────────────────────────────────────────
-→ View location: https://www.google.com/maps?q=${personData.lat},${personData.lon}
-→ Get directions: https://www.google.com/maps/dir/?api=1&origin=${recipient.lat},${recipient.lon}&destination=${personData.lat},${personData.lon}
+→ View location: https://www.google.com/maps?q=${lat},${lon}
+→ Get directions: https://www.google.com/maps/dir/?api=1&origin=${recipient.lat},${recipient.lon}&destination=${lat},${lon}
 
 ⚡ IMMEDIATE ACTION REQUIRED:
 - Dispatch emergency response team immediately
+- Review attached photo to identify the person
 - Contact person's family/authorities
 - Provide necessary assistance
 - Coordinate with other responding organizations
@@ -422,6 +357,14 @@ Missing Person Recovery System - Automated Notification
 Sent to: hrushikeshsarangi7@gmail.com
 ═══════════════════════════════════════════
       `,
+      attachments: [
+        {
+          filename: imageName,
+          content: imageBase64,
+          encoding: 'base64',
+          contentType: imageMimeType,
+        }
+      ],
     };
     
     try {
@@ -439,23 +382,34 @@ Sent to: hrushikeshsarangi7@gmail.com
   return { success: failed === 0, sent, failed };
 }
 
-// ==================== API ENDPOINTS ====================
+// ==================== API ENDPOINT ====================
 
 // POST endpoint to handle missing person found notifications
 export async function POST(request: NextRequest) {
   try {
-    const body: NotificationRequest = await request.json();
+    // Get form data from request
+    const formData = await request.formData();
+    const image = formData.get('image') as File;
+    const lat = parseFloat(formData.get('lat') as string);
+    const lon = parseFloat(formData.get('lon') as string);
     
     // Validate input
-    if (!body.name || body.lat === undefined || body.lon === undefined) {
+    if (!image) {
       return NextResponse.json(
-        { success: false, error: 'Missing required fields: name, lat, lon' },
+        { success: false, error: 'Image file is required' },
+        { status: 400 }
+      );
+    }
+    
+    if (isNaN(lat) || isNaN(lon)) {
+      return NextResponse.json(
+        { success: false, error: 'Valid latitude and longitude are required' },
         { status: 400 }
       );
     }
     
     // Validate coordinates
-    if (body.lat < -90 || body.lat > 90 || body.lon < -180 || body.lon > 180) {
+    if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
       return NextResponse.json(
         { success: false, error: 'Invalid coordinates' },
         { status: 400 }
@@ -470,26 +424,21 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    console.log('🔍 Missing person found:', body);
+    console.log('🔍 Missing person found at:', lat, lon);
     
-    // Connect to database
-    await connectToDatabase();
-    
-    // Fetch active organizations
-    const allOrganizations = await Organization.find({ active: true });
-    
-    if (allOrganizations.length === 0) {
+    // Use hardcoded organizations
+    if (ORGANIZATIONS.length === 0) {
       return NextResponse.json({
         success: false,
-        message: 'No active organizations found in database',
+        message: 'No organizations configured',
         notificationsSent: 0,
       });
     }
     
-    console.log(`📊 Found ${allOrganizations.length} active organizations`);
+    console.log(`📊 Found ${ORGANIZATIONS.length} organizations`);
     
     // Get nearby organizations (40km radius)
-    const nearbyOrganizations = getNearestOrganizations(body.lat, body.lon, allOrganizations, 40);
+    const nearbyOrganizations = getNearestOrganizations(lat, lon, ORGANIZATIONS, 40);
     
     if (nearbyOrganizations.length === 0) {
       return NextResponse.json({
@@ -502,15 +451,14 @@ export async function POST(request: NextRequest) {
     
     console.log(`📧 Sending notifications to ${nearbyOrganizations.length} organizations...`);
     
-    // Send notifications
-    const result = await sendNotifications(nearbyOrganizations, body);
+    // Send notifications with image
+    const result = await sendNotifications(nearbyOrganizations, image, lat, lon);
     
     return NextResponse.json({
       success: result.success,
       message: result.success 
         ? 'All notifications sent successfully' 
         : `Sent ${result.sent} notifications, ${result.failed} failed`,
-      personName: body.name,
       notificationsSent: result.sent,
       notificationsFailed: result.failed,
       recipientCount: nearbyOrganizations.length,
@@ -532,41 +480,5 @@ export async function POST(request: NextRequest) {
       },
       { status: 500 }
     );
-  }
-}
-
-// GET endpoint for health check
-export async function GET(request: NextRequest) {
-  try {
-    await connectToDatabase();
-    const orgCount = await Organization.countDocuments({ active: true });
-    const notificationCount = await Notification.countDocuments();
-    const recentFound = await Notification.countDocuments({ 
-      createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } 
-    });
-    
-    return NextResponse.json({
-      status: 'ok',
-      message: 'Missing Person Recovery System is operational',
-      timestamp: new Date().toISOString(),
-      database: {
-        connected: true,
-        activeOrganizations: orgCount,
-        totalReports: notificationCount,
-        foundLast24Hours: recentFound,
-      },
-      configuration: {
-        smtpConfigured: !!(process.env.SMTP_USER && process.env.SMTP_PASSWORD),
-        notificationRadius: '40 km',
-        recipientEmail: 'hrushikeshsarangi7@gmail.com',
-      },
-    });
-  } catch (error) {
-    return NextResponse.json({
-      status: 'error',
-      message: 'Service running but database connection failed',
-      timestamp: new Date().toISOString(),
-      error: error instanceof Error ? error.message : 'Unknown error',
-    }, { status: 503 });
   }
 }
